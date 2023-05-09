@@ -14,7 +14,7 @@ centers = [122, 128]; # [row idx, column idx] center pixel of the phantom
 PixelSpacing = [0.9766, 0.9766]; # [mm]
 
 # Loading Images
-[d3d, d3dmeta] = dicomHelper.dicomdir_read(DICOMDIR_PATH);
+[d3d, d3dmeta] = dicomdir_read(DICOMDIR_PATH);
 
 
 image = Image3D(d3d, d3dmeta.sliceLocations,...
