@@ -16,6 +16,44 @@ classdef ACR_Phantom_QA
       phantom.PixelSpacing = PixelSpacing; # mm
     endfunction
 
+    function geomAccuracy = ACR_test_GeometricAccuracy_localizer(phantom, d3d_slice)
+      # ONLY USED FOR LOCALIZER IMAGE_PATH
+
+      # Rough segmentation of water
+      [slice_th, threshold] = ACR_Phantom_QA.findPhantomBody(d3d_slice);
+      slice_th = imfill(slice_th,"holes");
+
+      # Threshold again; level should be 1/2 mean value of water signal
+      water_signals = nonzeros(slice_th.*d3d_slice);
+      threshold = mean(water_signals)/2;
+      slice_th = d3d_slice > threshold;
+      # no hole fill in order to help align shape better
+
+      # Convert to [r,c] data
+      [row,col] = find(slice_th);
+      d3d_transformed = pca_transform( double([row,col]) , double(d3d_slice) ) ;
+      slice_th_transformed = d3d_transformed > threshold;
+      slice_th_transformed = imfill(slice_th_transformed, "holes");
+
+      # At center row, find the sagittal length of the phantom
+      [row,col] = find(slice_th);
+      range_rows = [ min(row), max(row)];
+      saggital_idx = []; idxs = [];
+      for i = min(range_rows):max(range_rows)
+        # find the leftmost and rightmost index at row "i"
+        row_i = slice_th_transformed(i,:);
+        idx_left = find(row_i,1,"first") ;
+        idx_right = find(row_i,1,"last") ;
+        saggital_idx = [saggital_idx; idx_right - idx_left];
+        idxs = [ idxs ; [idx_left, idx_right] ] ;
+      endfor
+
+      geomAccuracy = median(saggital_idx).*phantom.PixelSpacing(1);
+      ACR_Phantom_QA.visualize(pca_transform( double([row,col]) , d3d_slice )); hold on;
+      plot([median(idxs(:,1)); median(idxs(:,2))] , [120, 120], '-r')
+      hold off;
+    endfunction
+
     function geomAccuracy = ACR_test_GeometricAccuracy(phantom, d3d_slice, all_directions)
       # Returns geometric accuracy in milimetres
       # Test geometric accuracy in slice 1
